@@ -6,7 +6,7 @@
   "compilationOptions": {},
   "targets": {
     ".NETCoreApp,Version=v9.0": {
-      "KCD2 XML Modding Tools/1.0.3.21": {
+      "KCD2 XML Modding Tools/1.0.4.22": {
         "runtime": {
           "KCD2 XML Modding Tools.dll": {}
         }
@@ -14,7 +14,7 @@
     }
   },
   "libraries": {
-    "KCD2 XML Modding Tools/1.0.3.21": {
+    "KCD2 XML Modding Tools/1.0.4.22": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
