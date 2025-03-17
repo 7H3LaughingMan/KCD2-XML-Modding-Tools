@@ -1,0 +1,81 @@
+﻿name: Publish ClickOnce Application
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      id-token: write
+      contents: write
+    
+    steps:
+      - name: Get Tags
+        run: |
+          $version = "${{ github.ref_name }}".Substring(1) + "." + "${{ github.run_number }}"
+          echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Checkout Application
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          path: application
+
+      - name: Checkout GitHub Pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+      
+      - name: Setup Git
+        run: |
+          git config --global user.name "7H3LaughingMan"
+          git config --global user.email "7H3LaughingMan@proton.me"
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build Application
+        working-directory: ./application
+        run: |
+          dotnet restore -r win-x64
+          msbuild /target:publish /p:PublishProfile=ClickOnceProfile /p:ApplicationVersion=$env:VERSION /p:Configuration=Release
+
+      - name: Sign Files
+        uses: azure/trusted-signing-action@v0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: https://eus.codesigning.azure.net/
+          trusted-signing-account-name: GitHub
+          certificate-profile-name: GitHub
+          clickonce-application-name: KCD2 XML Modding Tools
+          clickonce-publisher-name: 7H3LaughingMan
+          files-folder: ./application/bin/Publish
+          files-folder-filter: application,exe
+
+      - name: Publish Application
+        working-directory: ./gh-pages
+        run: |
+            if (Test-Path "Application Files") { Remove-Item -Path "Application Files" -Recurse }
+            if (Test-Path "KCD2 XML Modding Tools.application") { Remove-Item -Path "KCD2 XML Modding Tools.application" }
+            if (Test-Path "Launcher.exe") { Remove-Item -Path "Launcher.exe" }
+            if (Test-Path "setup.exe") { Remove-Item -Path "setup.exe" }
+            Copy-Item -Path "../application/bin/Publish/*" -Destination "." -Recurse
+            git add -A
+            git commit -m "Publish v$env:VERSION"
+            git push
+      
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "./gh-pages/setup.exe"
